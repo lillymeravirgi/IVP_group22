@@ -3,6 +3,11 @@ outputs/models/
 outputs/submissions/
 outputs/logs/
 
+data/
+outputs/
+*.pkl
+__pycache__/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

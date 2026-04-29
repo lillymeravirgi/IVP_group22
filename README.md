@@ -36,6 +36,7 @@ This will:
 IVP_group22/
 │
 ├── data/                           # Dataset folder (provided by teachers)
+                                         ← each person has it locally (NOT on GitHub)
 │   ├── test/test/                  # Test images used for prediction
 │   │
 │   └── train/train/                # Training dataset

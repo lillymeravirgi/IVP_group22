@@ -2,45 +2,54 @@ import os
 import joblib
 import pandas as pd
 import numpy as np
-import kagglehub
 
 from src.features import preprocess_image, extract_features
+from src.model import create_model
 
-DATA_PATH = kagglehub.competition_download('iivp-2026-challenge')
-
-CSV_PATH = os.path.join(DATA_PATH, "test.csv")
-TEST_PATH = os.path.join(DATA_PATH, "test", "test")
+TRAIN_PATH = "data/train/train"
+CSV_PATH = "data/train.csv"
 
 MODEL_PATH = "outputs/models/svm_model.pkl"
-OUTPUT_PATH = "outputs/submissions/submission.csv"
 
-def generate_predictions():
 
-    model = joblib.load(MODEL_PATH)
+def load_training_data():
 
-    test_df = pd.read_csv(CSV_PATH)
+    train_df = pd.read_csv(CSV_PATH)
 
-    predictions = []
+    X = []
+    y = []
 
-    for _, row in test_df.iterrows():
+    for _, row in train_df.iterrows():
 
         img_id = str(row["Id"])
+        label = int(row["Category"])
 
-        img_path = os.path.join(TEST_PATH, f"{img_id}.png")
+        img_path = os.path.join(TRAIN_PATH, str(label), f"{img_id}.png")
 
         img = preprocess_image(img_path)
 
         features = extract_features(img)
 
-        pred = model.predict([features])[0]
+        X.append(features)
+        y.append(label)
 
-        predictions.append(pred)
+    return np.array(X), np.array(y)
 
-    submission = pd.DataFrame({
-        "Id": test_df["Id"],
-        "Category": predictions
-    })
 
-    submission.to_csv(OUTPUT_PATH, index=False)
+def train_model():
 
-    print("Submission saved to:", OUTPUT_PATH)
+    print("Loading training data...")
+
+    X, y = load_training_data()
+
+    print("Training model...")
+
+    model = create_model()
+
+    model.fit(X, y)
+
+    joblib.dump(model, MODEL_PATH)
+
+    print("Model saved to:", MODEL_PATH)
+
+    return model
