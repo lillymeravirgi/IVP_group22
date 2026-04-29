@@ -2,16 +2,17 @@ import os
 import joblib
 import pandas as pd
 import numpy as np
+import kagglehub
 
 from src.features import preprocess_image, extract_features
 
-TEST_PATH = "data/test/test"
-CSV_PATH = "data/test.csv"
+DATA_PATH = kagglehub.competition_download('iivp-2026-challenge')
+
+CSV_PATH = os.path.join(DATA_PATH, "test.csv")
+TEST_PATH = os.path.join(DATA_PATH, "test", "test")
 
 MODEL_PATH = "outputs/models/svm_model.pkl"
-
 OUTPUT_PATH = "outputs/submissions/submission.csv"
-
 
 def generate_predictions():
 

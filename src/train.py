@@ -1,13 +1,17 @@
+from src.features import preprocess_image, extract_features
+from src.model import create_model
+
 import os
 import joblib
 import pandas as pd
 import numpy as np
 
-from src.features import preprocess_image, extract_features
-from src.model import create_model
+import kagglehub
 
-TRAIN_PATH = "data/train/train"
-CSV_PATH = "data/train.csv"
+DATA_PATH = kagglehub.competition_download('iivp-2026-challenge')
+
+TRAIN_PATH = os.path.join(DATA_PATH, "train", "train")
+CSV_PATH = os.path.join(DATA_PATH, "train.csv")
 
 MODEL_PATH = "outputs/models/svm_model.pkl"
 
