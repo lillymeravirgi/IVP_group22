@@ -6,3 +6,4 @@ scikit-learn
 joblib
 kagglehub
 tensorflow>=2.10.0
+xgboost
