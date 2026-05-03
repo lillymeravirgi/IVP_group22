@@ -52,12 +52,12 @@ def train_cnn():
     X, y = load_training_data()
 
 
-    X_train, x_temp, y_train, y_temp = train_test_split(
+    X_train, x_val, y_train, y_val = train_test_split(
         X, y, test_size=0.3, random_state=42, stratify=y
     )
-    X_val, x_test, y_val, y_test = train_test_split(
-        x_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp
-    )
+    # X_val, x_test, y_val, y_test = train_test_split(
+    #     x_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp
+    # )
 
     
 
@@ -82,7 +82,7 @@ def train_cnn():
     print("\nTraining CNN...")
     history = model.fit(
         X_train, y_train,
-        validation_data=(X_val, y_val),
+        validation_data=(x_val, y_val),
         epochs=30,
         batch_size=256,
         callbacks=[early_stop],
@@ -91,14 +91,14 @@ def train_cnn():
     
 
 
-    y_pred = model.predict(x_test).argmax(axis=1)
-    test_accuracy = accuracy_score(y_test, y_pred)
+    y_pred = model.predict(x_val).argmax(axis=1)
+    test_accuracy = accuracy_score(y_val, y_pred)
     
-    print(f" TEST ACCURACY: {test_accuracy*100:.2f}%")
+    print(f" VALIDATION ACCURACY: {test_accuracy*100:.2f}%")
     print("\nClassification Report:")
-    print(classification_report(y_test, y_pred))
+    print(classification_report(y_val, y_pred))
     print("\nConfusion Matrix:")
-    print(confusion_matrix(y_test, y_pred))
+    print(confusion_matrix(y_val, y_pred))
     
     # Save model
     os.makedirs("outputs/models", exist_ok=True)

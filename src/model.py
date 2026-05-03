@@ -1,3 +1,4 @@
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 import tensorflow as tf
 from tensorflow import keras
@@ -46,18 +47,19 @@ def create_cnn(num_classes=10):
 
 def create_classifier():
     """
-    Create a XGBClassifier that works on encoded features
+    Create a RandomForestClassifier that works on encoded features
     """
-    classifier = XGBClassifier(
-        n_estimators=200,
-        max_depth=7,
-        learning_rate=0.1,
-        subsample=0.8,
-        colsample_bytree=0.8,
+    classifier = RandomForestClassifier(
+        n_estimators=100,
+        max_depth=15,  # Limit tree depth
+        min_samples_split=10,  # Require more samples to split
+        min_samples_leaf=5,  # Require more samples at leaf
+        max_features='sqrt',  # Reduce feature space
         random_state=42,
         n_jobs=-1,
         verbose=1
     )
+    return classifier
   
     return classifier
 
