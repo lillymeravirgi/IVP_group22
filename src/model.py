@@ -12,10 +12,46 @@ def create_model():
     model = SVC(
         kernel="rbf",
         gamma="scale",
-        C=5
+        C=5,
+        probability=True  # needed for predict_proba in ensemble
     )
 
     return model
+
+def create_cnn_v2(num_classes=10):
+    ##Improved CNN with BatchNormalization
+    model = keras.Sequential([
+        layers.Reshape((28, 28, 1), input_shape=(784,)),
+
+        layers.RandomRotation(0.05),
+        layers.RandomTranslation(0.1, 0.1),
+        layers.RandomZoom(0.1),
+
+        layers.Conv2D(32, (3, 3), padding='same'),
+        layers.BatchNormalization(),
+        layers.Activation('relu'),
+        layers.MaxPooling2D((2, 2)),
+        layers.Dropout(0.2),
+
+        layers.Conv2D(64, (3, 3), padding='same'),
+        layers.BatchNormalization(),
+        layers.Activation('relu'),
+        layers.MaxPooling2D((2, 2)),
+        layers.Dropout(0.2),
+
+        layers.Conv2D(128, (3, 3), padding='same'),
+        layers.BatchNormalization(),
+        layers.Activation('relu'),
+        layers.Dropout(0.2),
+
+        layers.Flatten(),
+        layers.Dense(256, activation='relu'),
+        layers.BatchNormalization(),
+        layers.Dropout(0.3),
+        layers.Dense(num_classes, activation='softmax')
+    ])
+    return model
+
 
 def create_cnn(num_classes=10):
     """
@@ -23,7 +59,12 @@ def create_cnn(num_classes=10):
     """
     model = keras.Sequential([
         layers.Reshape((28, 28, 1), input_shape=(784,)),
-        
+
+        # Augmentation layers — only active during training
+        layers.RandomRotation(0.05),          # ±18 degrees
+        layers.RandomTranslation(0.1, 0.1),   # ±10% shift
+        layers.RandomZoom(0.1),               # ±10% zoom
+
         layers.Conv2D(32, (3, 3), activation='relu'),
         layers.MaxPooling2D((2, 2)),
         layers.Dropout(0.2),
