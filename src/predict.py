@@ -57,5 +57,33 @@ def generate_predictions():
     return results_df
 
 
+def grid_search_weights():
+    #Grid search over cnn/svm ensemble weights on the validation set
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import accuracy_score
+    from src.train import load_training_data, load_training_data_hog
+
+    X_pix, y   = load_training_data()
+    X_hog, _   = load_training_data_hog()
+    _, X_pix_val, _, y_val = train_test_split(X_pix, y, test_size=0.3, random_state=42, stratify=y)
+    _, X_hog_val, _, _     = train_test_split(X_hog, y, test_size=0.3, random_state=42, stratify=y)
+
+    cnn     = keras.models.load_model(CNN_PATH)
+    svm_hog = joblib.load(SVM_HOG_PATH)
+
+    p_cnn = cnn.predict(X_pix_val, verbose=0)
+    p_hog = svm_hog.predict_proba(X_hog_val)
+
+    print(f"{'CNN weight':>12} {'HOG weight':>12} {'Val accuracy':>14}")
+    print("-" * 42)
+    best_acc, best_w = 0, 0
+    for w in [0.70, 0.80, 0.85, 0.90, 0.95, 1.00]:
+        acc = accuracy_score(y_val, (w*p_cnn + (1-w)*p_hog).argmax(1))
+        print(f"{w:>12.2f} {1-w:>12.2f} {acc*100:>13.4f}%")
+        if acc > best_acc:
+            best_acc, best_w = acc, w
+    print(f"\nBest: CNN={best_w:.2f}, HOG={1-best_w:.2f} -> {best_acc*100:.4f}%")
+
+
 if __name__ == "__main__":
     generate_predictions()
