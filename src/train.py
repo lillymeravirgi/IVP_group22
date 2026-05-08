@@ -1,199 +1,187 @@
-import os
 import joblib
-import pandas as pd
 import numpy as np
-from tensorflow import keras
-from sklearn.model_selection import train_test_split
+import pandas as pd
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split
+from tensorflow import keras
 
-from src.features import preprocess_image, extract_features, extract_hog_features, extract_combined_features
+from src.config import (
+    CNN_MODEL_PATH,
+    CNN_V2_MODEL_PATH,
+    NUM_CLASSES,
+    RANDOM_STATE,
+    SVM_HOG_MODEL_PATH,
+    SVM_MODEL_PATH,
+    TRAIN_CSV_PATH,
+    TRAIN_IMAGE_DIR,
+    TRAIN_VAL_SPLIT,
+    ensure_output_dirs,
+)
+from src.features import extract_features, extract_hog_features, preprocess_image
 from src.model import create_cnn, create_cnn_v2, create_model
 
-TRAIN_PATH = "data/train/train"
-CSV_PATH = "data/train.csv"
 
-TRAIN_VAL_SPLIT = 0.3  #30% validation - 70% training
-RANDOM_STATE = 42
+def _image_path_for_row(row):
+    img_id = str(row["Id"])
+    label = int(row["Category"])
+    return TRAIN_IMAGE_DIR / str(label) / f"{img_id}.png"
+
+
+def _load_training_data_with_extractor(extractor):
+    train_df = pd.read_csv(TRAIN_CSV_PATH)
+    X, y = [], []
+
+    for _, row in train_df.iterrows():
+        img = preprocess_image(_image_path_for_row(row))
+        X.append(extractor(img))
+        y.append(int(row["Category"]))
+
+    return np.array(X), np.array(y)
 
 
 def load_training_data():
-    
-    train_df = pd.read_csv(CSV_PATH)
+    """Load flattened pixel features and labels from the training set."""
+    return _load_training_data_with_extractor(extract_features)
 
-    X = []
-    y = []
 
-    for _, row in train_df.iterrows():
-        img_id = str(row["Id"])
-        label = int(row["Category"])
+def load_training_data_hog():
+    """Load HOG features and labels from the training set."""
+    return _load_training_data_with_extractor(extract_hog_features)
 
-        img_path = os.path.join(TRAIN_PATH, str(label), f"{img_id}.png")
 
-        img = preprocess_image(img_path)
-        features = extract_features(img)
+def _train_val_split(X, y):
+    return train_test_split(
+        X,
+        y,
+        test_size=TRAIN_VAL_SPLIT,
+        random_state=RANDOM_STATE,
+        stratify=y,
+    )
 
-        X.append(features)
-        y.append(label)
-
-    X = np.array(X)
-    y = np.array(y)
-
-    return X, y
 
 def train_cnn():
-    """
-    Train CNN model
-    """
-
-    print("Training cnn.............................")
-  
-    
-  
+    """Train the baseline CNN model."""
+    print("Training CNN...")
+    ensure_output_dirs()
     X, y = load_training_data()
+    X_train, X_val, y_train, y_val = _train_val_split(X, y)
 
-
-    X_train, x_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.3, random_state=42, stratify=y
-    )
-    # X_val, x_test, y_val, y_test = train_test_split(
-    #     x_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp
-    # )
-
-    
-
-    model = create_cnn(num_classes=10)
+    model = create_cnn(num_classes=NUM_CLASSES)
     model.compile(
-        optimizer='adam',
-        loss='sparse_categorical_crossentropy',
-        metrics=['accuracy']
+        optimizer="adam",
+        loss="sparse_categorical_crossentropy",
+        metrics=["accuracy"],
     )
-    
-
-    #model.summary() #prints model architecture
-    
 
     early_stop = keras.callbacks.EarlyStopping(
-        monitor='val_accuracy',
+        monitor="val_accuracy",
         patience=5,
-        restore_best_weights=True
+        restore_best_weights=True,
     )
 
-    print("\nTraining CNN...")
     history = model.fit(
-        X_train, y_train,
-        validation_data=(x_val, y_val),
+        X_train,
+        y_train,
+        validation_data=(X_val, y_val),
         epochs=30,
         batch_size=256,
         callbacks=[early_stop],
-        verbose=1
+        verbose=1,
     )
-    
 
-
-    y_pred = model.predict(x_val).argmax(axis=1)
-    test_accuracy = accuracy_score(y_val, y_pred)
-    
-    print(f" VALIDATION ACCURACY: {test_accuracy*100:.2f}%")
+    y_pred = model.predict(X_val).argmax(axis=1)
+    print(f"VALIDATION ACCURACY: {accuracy_score(y_val, y_pred) * 100:.2f}%")
     print("\nClassification Report:")
     print(classification_report(y_val, y_pred))
     print("\nConfusion Matrix:")
     print(confusion_matrix(y_val, y_pred))
-    
-    # Save model
-    os.makedirs("outputs/models", exist_ok=True)
-    model.save("outputs/models/cnn.keras")
-    print(f"\nNN model saved to: outputs/models/cnn.keras")
-    
+
+    model.save(CNN_MODEL_PATH)
+    print(f"\nCNN model saved to: {CNN_MODEL_PATH}")
     return model, history
 
 
-
 def train_svm():
-    print("training SVM.......")
-
+    """Train an SVM on raw pixel features."""
+    print("Training SVM...")
+    ensure_output_dirs()
     X, y = load_training_data()
-
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.3, random_state=RANDOM_STATE, stratify=y
-    )
+    X_train, X_val, y_train, y_val = _train_val_split(X, y)
 
     model = create_model()
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_val)
-    print(f"SVM VALIDATION ACCURACY: {accuracy_score(y_val, y_pred)*100:.2f}%")
+    print(f"SVM VALIDATION ACCURACY: {accuracy_score(y_val, y_pred) * 100:.2f}%")
     print("\nClassification Report:")
     print(classification_report(y_val, y_pred))
 
-    os.makedirs("outputs/models", exist_ok=True)
-    joblib.dump(model, "outputs/models/svm.joblib")
-    print("SVM saved to: outputs/models/svm.joblib")
-
+    joblib.dump(model, SVM_MODEL_PATH)
+    print(f"SVM saved to: {SVM_MODEL_PATH}")
     return model
 
 
-def load_training_data_hog():
-    #Load training data with HOG features instead of raw pixels.
-    train_df = pd.read_csv(CSV_PATH)
-    X, y = [], []
-    for _, row in train_df.iterrows():
-        img_path = os.path.join(TRAIN_PATH, str(int(row["Category"])), f"{str(row['Id'])}.png")
-        img = preprocess_image(img_path)
-        X.append(extract_hog_features(img))
-        y.append(int(row["Category"]))
-    return np.array(X), np.array(y)
-
-
 def train_svm_hog():
-    #Train svm on HOG features.
+    """Train the SVM on HOG features."""
     print("Training HOG-SVM...")
+    ensure_output_dirs()
     X, y = load_training_data_hog()
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.3, random_state=RANDOM_STATE, stratify=y
-    )
+    X_train, X_val, y_train, y_val = _train_val_split(X, y)
+
     model = create_model()
     model.fit(X_train, y_train)
+
     y_pred = model.predict(X_val)
-    print(f"HOG-SVM VALIDATION ACCURACY: {accuracy_score(y_val, y_pred)*100:.2f}%")
+    print(f"HOG-SVM VALIDATION ACCURACY: {accuracy_score(y_val, y_pred) * 100:.2f}%")
     print(classification_report(y_val, y_pred))
-    os.makedirs("outputs/models", exist_ok=True)
-    joblib.dump(model, "outputs/models/svm_hog.joblib")
-    print("HOG-SVM saved to: outputs/models/svm_hog.joblib")
+
+    joblib.dump(model, SVM_HOG_MODEL_PATH)
+    print(f"HOG-SVM saved to: {SVM_HOG_MODEL_PATH}")
     return model
 
 
 def train_cnn_v2():
-    #Train improved cnn with batchnormalization.
+    """Train the improved CNN with batch normalization."""
     print("Training CNN v2 (BatchNorm)...")
+    ensure_output_dirs()
     X, y = load_training_data()
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.3, random_state=42, stratify=y
-    )
-    model = create_cnn_v2(num_classes=10)
+    X_train, X_val, y_train, y_val = _train_val_split(X, y)
+
+    model = create_cnn_v2(num_classes=NUM_CLASSES)
     model.compile(
-        optimizer='adam',
-        loss='sparse_categorical_crossentropy',
-        metrics=['accuracy']
+        optimizer="adam",
+        loss="sparse_categorical_crossentropy",
+        metrics=["accuracy"],
     )
+
     early_stop = keras.callbacks.EarlyStopping(
-        monitor='val_accuracy', patience=7, restore_best_weights=True
+        monitor="val_accuracy",
+        patience=7,
+        restore_best_weights=True,
     )
     lr_schedule = keras.callbacks.ReduceLROnPlateau(
-        monitor='val_loss', factor=0.5, patience=3, min_lr=1e-6
+        monitor="val_loss",
+        factor=0.5,
+        patience=3,
+        min_lr=1e-6,
     )
+
     history = model.fit(
-        X_train, y_train,
+        X_train,
+        y_train,
         validation_data=(X_val, y_val),
         epochs=50,
         batch_size=256,
         callbacks=[early_stop, lr_schedule],
         verbose=1,
     )
+
     y_pred = model.predict(X_val).argmax(axis=1)
-    print(f"CNN v2 VALIDATION ACCURACY: {accuracy_score(y_val, y_pred)*100:.2f}%")
+    print(f"CNN v2 VALIDATION ACCURACY: {accuracy_score(y_val, y_pred) * 100:.2f}%")
     print(classification_report(y_val, y_pred))
-    model.save("outputs/models/cnn_v2.keras")
-    print("CNN v2 saved to: outputs/models/cnn_v2.keras")
+
+    model.save(CNN_V2_MODEL_PATH)
+    print(f"CNN v2 saved to: {CNN_V2_MODEL_PATH}")
     return model, history
 
 

@@ -3,6 +3,7 @@ pandas
 opencv-python
 matplotlib
 scikit-learn
+scikit-image
 joblib
 kagglehub
 tensorflow>=2.10.0

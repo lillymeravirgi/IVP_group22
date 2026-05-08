@@ -1,115 +1,71 @@
-# IVP Group22
+# IVP Group 22
 
-## Introduction to Image and Video Processing – Challenge 2026
+## Image and Video Processing Challenge 2026
 
-This project contains our implementation for the KEN3238 Image and Video Processing Challenge 2026.
+This project trains digit classifiers for the KEN3238 Image and Video Processing Challenge 2026
 
-The goal of the challenge is to classify digit images using image processing and machine learning techniques.
+The current pipeline trains two complementary models:
 
----
+- a CNN with data augmentation and batch normalization
+- an SVM trained on HOG features
 
-# Setup
+Predictions are generated with a weighted ensemble of both models.
 
-Install all required dependencies:
+## Setup
+
+Create an environment and install the dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Run the full pipeline:
+Place the challenge data in this structure:
+
+```text
+data/
+  train.csv
+  test.csv
+  sample_submission.csv
+  train/train/0/*.png
+  train/train/1/*.png
+  ...
+  train/train/9/*.png
+  test/test/*.png
+```
+
+## Run
+
+Run the full training and prediction pipeline:
 
 ```bash
 python run.py
 ```
 
 This will:
-- load the training data
-- train the model
-- generate predictions
-- create a submission file
 
----
+- load and preprocess the training images
+- train the CNN and HOG-SVM models
+- save trained models in `outputs/models/`
+- generate `outputs/predictions.csv`
 
-# Project Structure
+## Project Structure
 
 ```text
 IVP_group22/
-│
-├── data/                           # Dataset folder (provided by teachers)
-                                         ← each person has it locally (NOT on GitHub)
-│   ├── test/test/                  # Test images used for prediction
-│   │
-│   └── train/train/                # Training dataset
-│       ├── 0/                      # Images of digit 0
-│       ├── 1/                      # Images of digit 1
-│       ├── 2/                      # Images of digit 2
-│       ├── 3/                      # Images of digit 3
-│       ├── 4/                      # Images of digit 4
-│       ├── 5/                      # Images of digit 5
-│       ├── 6/                      # Images of digit 6
-│       ├── 7/                      # Images of digit 7
-│       ├── 8/                      # Images of digit 8
-│       ├── 9/                      # Images of digit 9
-│       │
-│       ├── train.csv               # Training labels and image IDs
-│       ├── test.csv                # Test image IDs
-│       └── sample_submission.csv   # Example Kaggle submission format
-│
-├── src/                            # Main source code
-│   ├── features.py                 # Image preprocessing and feature extraction
-│   ├── model.py                    # Machine learning model definition
-│   ├── train.py                    # Training pipeline
-│   ├── predict.py                  # Prediction and submission generation
-│   └── main.py                     # Main execution pipeline
-│
-├── notebooks/                      # Jupyter notebooks for experiments
-│   ├── exploration.ipynb           # Data visualization and exploration
-│   └── training.ipynb              # Model experimentation and testing
-│
-├── outputs/                        # Generated outputs
-│   ├── submissions/                # Kaggle submission CSV files
-│   ├── models/                     # Saved trained models
-│   └── logs/                       # Training logs and experiment notes
-│
-├── requirements.txt                # Python dependencies
-├── .gitignore                      # Ignored files for Git
-├── README.md                       # Project documentation
-└── run.py                          # Runs the complete pipeline
+  data/                  # Local dataset, ignored by Git
+  notebooks/             # Exploration and training notebooks
+  outputs/               # Generated models, logs, and predictions
+  src/
+    config.py            # Shared paths and pipeline settings
+    features.py          # Image preprocessing and feature extraction
+    model.py             # Model definitions
+    train.py             # Training utilities
+    predict.py           # Prediction and ensembling
+    main.py              # End-to-end pipeline
+  run.py                 # Pipeline entry point
 ```
 
----
+## Notes
 
-# Workflow
-
-1. Load and preprocess images
-2. Extract image features
-3. Train the classifier
-4. Predict test labels
-5. Generate Kaggle submission file
-
----
-
-# Technologies Used
-
-- Python
-- OpenCV
-- NumPy
-- Pandas
-- Scikit-learn
-- Matplotlib
-
----
-
-# Output
-
-Generated submission files are saved in:
-
-```text
-outputs/submissions/
-```
-
-Saved trained models are stored in:
-
-```text
-outputs/models/
-```
+- The data and generated outputs are ignored by Git.
+- Paths are resolved from the project root, so `python run.py` works from any current working directory as long as the project files are intact.
